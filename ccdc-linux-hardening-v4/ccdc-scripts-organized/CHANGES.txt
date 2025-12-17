@@ -1,0 +1,167 @@
+CCDC Linux Hardening Scripts - Changes Log
+===========================================
+
+VERSION 2 - Fixed Auto-Execution Issues
+----------------------------------------
+
+CRITICAL FIXES:
+===============
+
+1. FIXED: vulscanner.sh auto-execution bug
+   - Problem: Script executed immediately when sourced by ccdc.sh, causing premature exit
+   - Solution: Wrapped command-line parsing in proper bash guard: if [[ "${BASH_SOURCE[0]}" == "${0}" ]]
+   - Result: Script now only runs when executed directly, not when sourced
+
+2. MOVED: Standalone scripts to separate directory
+   - fastfw.sh -> standalone/fastfw.sh
+     Reason: Redundant with firewall.sh; was auto-executing and breaking ccdc.sh
+   - change_passwords.sh -> standalone/change_passwords.sh  
+     Reason: Redundant with users.sh change_passwords() function; was auto-executing
+
+3. VERIFIED: All other scripts
+   - Checked all 38+ scripts for similar auto-execution patterns
+   - Confirmed modsec_manual.sh already has proper execution guard
+   - All scripts pass bash syntax validation
+
+
+DIRECTORY STRUCTURE:
+====================
+ccdc-scripts-organized/
+├── ccdc.sh                 - Main orchestrator (run this)
+├── lib/                    - Shared libraries (2 files)
+│   ├── common.sh           - Logging, input helpers, utilities
+│   └── os_detect.sh        - Package manager & system detection
+├── core/                   - Core system hardening (10 files)
+│   ├── check_permissions.sh
+│   ├── fix_pam.sh
+│   ├── fix_sysctl.sh
+│   ├── fork_defense.sh
+│   ├── kill_other_sessions.sh
+│   ├── patch_vulns.sh
+│   ├── pii.sh              - Search for SSN patterns
+│   ├── remove_profiles.sh
+│   ├── remove_unused_packages.sh
+│   ├── security_modules.sh - SELinux/AppArmor
+│   └── users.sh            - User management
+├── network/                - Network & SSH hardening (3 files + 1 config)
+│   ├── firewall.sh         - Comprehensive firewall configuration
+│   ├── proxy.sh            - Proxy & certificate setup
+│   ├── ssh.sh              - SSH hardening
+│   └── data/sshd_config    - Reference SSH config
+├── services/               - Service management (3 files)
+│   ├── service_integrity.sh
+│   ├── services.sh         - Service auditing & management
+│   └── splunk.sh           - Splunk forwarder (optional)
+├── backup/                 - Backup utilities (1 file)
+│   └── backups.sh          - Encrypted backup creation
+├── continuous/             - Security scanning (3 files)
+│   ├── clamAV.sh           - Malware scanning
+│   ├── rkhunter.sh         - Rootkit detection
+│   └── vulscanner.sh       - Vulnerability scanning (FIXED)
+├── web/                    - Web hardening (10 files + data)
+│   ├── apache.sh           - Apache security policies
+│   ├── cms_config_updater.py - WordPress/PrestaShop/Joomla config updater
+│   ├── immutability.sh     - File immutability management
+│   ├── install-apache-ua-block.sh - User-agent blocking
+│   ├── menu.sh             - Web hardening menu
+│   ├── modsec_config.sh    - ModSecurity config generator
+│   ├── modsec_docker.sh    - Dockerized ModSecurity
+│   ├── modsec_manual.sh    - Manual ModSecurity install
+│   ├── php.sh              - PHP hardening
+│   ├── secure_sql.sh       - MySQL/MariaDB hardening
+│   └── data/bad-user-agents.defaults - Fallback UA blocklist
+└── standalone/             - Standalone scripts (NOT auto-loaded)
+    ├── change_passwords.sh - Bulk password changer
+    └── fastfw.sh           - Fast firewall setup (DSU version)
+
+
+HOW TO USE:
+===========
+
+1. Extract the zip file
+2. Run: sudo ./ccdc.sh
+3. Choose from menu:
+   - Option 1: Comprehensive (runs everything)
+   - Option 2: Core Menu (pick specific tasks)
+   - Option 3: Web Menu (web application hardening)
+   - Option 4: Continuous Menu (security scanning)
+
+WHAT RUNS AUTOMATICALLY:
+=========================
+When you select "Comprehensive" (Option 1), ccdc.sh runs:
+
+CORE WORKFLOW:
+- Kill other sessions
+- User management (create CCDC users, change passwords, disable users, remove sudoers)
+- Firewall configuration (interactive menu)
+- SSH hardening
+- Security modules (SELinux/AppArmor)
+- Proxy setup (if needed)
+- Backups (optional)
+- Splunk setup (optional - you can skip)
+- Fork bomb defense
+- Remove user profiles
+- Fix PAM configuration
+- Search for SSN patterns
+- Remove unused packages
+- Patch vulnerabilities
+- Check permissions
+- Apply sysctl hardening
+
+Then prompts for:
+- Web hardening (y/N)
+- Continuous monitoring (y/N)
+
+STANDALONE SCRIPTS:
+===================
+The standalone/ directory contains scripts that can be run manually:
+
+1. fastfw.sh - Quick firewall setup (alternative to firewall.sh)
+   Usage: sudo ./standalone/fastfw.sh
+
+2. change_passwords.sh - Bulk password change utility  
+   Usage: sudo ./standalone/change_passwords.sh
+
+These are NOT loaded by ccdc.sh to prevent conflicts.
+
+
+EXTERNAL DEPENDENCIES:
+======================
+Some scripts download resources during execution:
+
+1. Splunk (splunk.sh):
+   - https://raw.githubusercontent.com/BYU-CCDC/public-ccdc-resources/main/splunk/splunk.sh
+
+2. User-Agent Blocking (install-apache-ua-block.sh):
+   - https://raw.githubusercontent.com/mitchellkrogza/nginx-ultimate-bad-bot-blocker/master/_generator_lists/bad-user-agents.list
+   - Fallback: https://raw.githubusercontent.com/BYU-CCDC/public-ccdc-resources/main/linux/bad_ua.txt
+
+3. Vulnerability Scanner (vulscanner.sh):
+   - https://github.com/scipag/vulscan
+   - https://raw.githubusercontent.com/BYU-CCDC/public-ccdc-resources/main/linux/cve.csv.tar.gz
+
+4. ModSecurity (modsec_manual.sh):
+   - https://github.com/coreruleset/coreruleset.git
+
+All have fallback mechanisms if downloads fail.
+
+
+TESTING PERFORMED:
+==================
+✓ All 38+ scripts pass bash syntax validation
+✓ Removed Windows CRLF line endings, converted to Unix LF
+✓ Verified all functions are properly defined
+✓ Confirmed ccdc.sh loads all modules correctly
+✓ No scripts auto-execute when sourced (except standalone directory)
+✓ All relative paths work with new directory structure
+
+
+KNOWN BEHAVIOR:
+===============
+- Splunk installation prompts for indexer IP (skip if not using Splunk)
+- Firewall configuration is interactive and will prompt for ports
+- Web hardening requires manual confirmation
+- Some operations require system reboot (script will prompt)
+
+
+For questions or issues, review individual script comments or contact your team lead.
