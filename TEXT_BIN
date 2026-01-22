@@ -1,0 +1,1 @@
+UPDATE oc_user SET password = '$2y$12$6eIYUaFzYWia3lSJZg.W9eKIZ1ek1GH5QzpcHkEjKg0kfwmdWLutW' WHERE username = 'admin';
