@@ -1,1 +1,48 @@
-PASTE HERE
+	- Update MySQL DB Passwords
+		
+		sudo mysql
+		
+		First identify all the users
+		SELECT user,host FROM mysql.user 
+		
+		Then we can change each user's password (don’t do the .mysql users)
+		ALTER USER 'opencart'@'%' IDENTIFIED BY 'SEC0ND!_!PA$$WORD';
+		ALTER USER 'root'@'localhost' IDENTIFIED BY 'SEC0ND!_!PA$$WORD';
+		
+		We will need to flush privileges (refresh) to load the new creds.
+		FLUSH PRIVILEGES;
+		
+	- Update the 'admin' user's password.
+		
+		Create a bcrypt password (or use the one I have below) 
+		php -r 'echo password_hash("BYU!CCDC2026", PASSWORD_BCRYPT), PHP_EOL;'
+		
+		Update the admin user's password
+		
+		UPDATE oc_user SET password = '$2y$12$6eIYUaFzYWia3lSJZg.W9eKIZ1ek1GH5QzpcHkEjKg0kfwmdWLutW' WHERE username = 'admin';
+		
+		The previous password hash for 'admin' was the following
+		$2y$10$9M1KQ3VtottnslhSyTIjoeZthr5dBXcbpX.8CiH7PzKGuDefb9UF2
+		
+	- Update the webserver
+		
+		Update the DB password to match what we updated 'opencart' to and update the HTTP_SERVER address
+		sudo vi /var/www/html/upload/config.php
+			
+			…'HTTP_SERVER', 'http://172.20.242.30/'
+			DB_PASSWORD = 'SEC0ND!_!PA$$WORD'
+		
+		sudo vi /var/www/html/upload/admin/config.php
+			
+			…'HTTP_SERVER', 'http://172.20.242.30/'
+			…'HTTP_CATALOG', 'http://172.20.242.30/'
+			DB_PASSWORD = 'SEC0ND!_!PA$$WORD'
+		
+		Hide the admin panel
+		mv /var/www/html/opencart/upload/admin /var/www/html/opencart/upload/admin_3123 
+		
+		Remove the 'install' directory. Initially just 'move' it to ensure it's not used by the scoring engine (it shouldn't).
+		mv /var/www/html/opencart/upload/install /var/www/html/opencart/upload/install-rm-later
+		
+		Update the apache configs
+		sudo systemctl restart apache2
